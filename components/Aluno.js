@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Text, View, StyleSheet,Button, Image,TextInput} from 'react-native';
 import {useState} from 'react'
+import ImagePicker from 'react-native-image-picker';
+import { getStorage, ref,getDownloadURL, uploadBytesResumable    } from "firebase/storage";
 
 
 import db from '../config.js'
@@ -14,6 +16,35 @@ export default function Disciplina() {
   const [cidade,setCidade] = useState("")
   const [foto,setFoto] = useState("")
 
+  const storage = getStorage();
+
+  const [imgUrl, setImgUrl] = useState(null);
+  const [progresspercent, setProgresspercent] = useState(0);
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const file = e.target[0]?.files[0]
+    if (!file) return;
+    const storageRef = ref(storage, `files/${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on("state_changed",
+      (snapshot) => {
+        const progress =
+          Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        setProgresspercent(progress);
+      },
+      (error) => {
+        alert(error);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          setImgUrl(downloadURL)
+        });
+      }
+    );
+  }
+
 
 
   return (
@@ -22,6 +53,23 @@ export default function Disciplina() {
       <Text style={styles.paragraph}>
         Cadastro Aluno
       </Text>
+
+      <div className="App">
+      <form onSubmit={handleSubmit} className='form'>
+        <input type='file' />
+        <button type='submit'>Upload</button>
+      </form>
+      {
+        !imgUrl &&
+        <div className='outerbar'>
+          <div className='innerbar' style={{ width: `${progresspercent}%` }}>{progresspercent}%</div>
+        </div>
+      }
+      {
+        imgUrl &&
+        <img src={imgUrl} alt='uploaded file' height={200} />
+      }
+    </div>
 
       <TextInput
         placeholder="Digite o nome do Aluno"
